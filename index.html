@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>El viaje de las 25 estrellas</title>
+<style>
+:root{--bg:#0c1020;--panel:#151b32;--text:#f7f7fb;--muted:#b8bfd8}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(circle at 50% 20%,#26325f 0,#0c1020 55%,#070a13 100%);color:var(--text)}
+body{display:flex;flex-direction:column}
+header{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:rgba(8,11,22,.72);backdrop-filter:blur(12px);z-index:5;border-bottom:1px solid rgba(255,255,255,.08)}
+.title{font-weight:700;font-size:15px;letter-spacing:.2px}.sub{font-size:12px;color:var(--muted);margin-top:2px}.actions{display:flex;gap:8px;align-items:center}button{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:white;border-radius:10px;padding:9px 12px;cursor:pointer}button:hover{background:rgba(255,255,255,.14)}
+#book{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px}
+#book .page{background:#fff;box-shadow:0 18px 50px rgba(0,0,0,.42)}
+#book .page img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
+#book .page.-hard{background:#fff}
+footer{height:54px;display:flex;align-items:center;justify-content:center;gap:14px;background:rgba(8,11,22,.72);border-top:1px solid rgba(255,255,255,.08);z-index:5}.hint{font-size:12px;color:var(--muted)}#counter{font-variant-numeric:tabular-nums;font-size:13px;min-width:70px;text-align:center}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#0c1020;z-index:20;transition:opacity .35s}.loadbox{text-align:center}.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.18);border-top-color:white;border-radius:50%;animation:spin 1s linear infinite;margin:auto auto 14px}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:700px){header{height:58px;padding:0 12px}.sub{display:none}#book{padding:8px}footer{height:52px}.hint{display:none}button{padding:8px 10px}}
+</style>
+</head>
+<body>
+<div id="loading"><div class="loadbox"><div class="spinner"></div><div>Cargando el libro…</div></div></div>
+<header><div><div class="title">🌟 El viaje de las 25 estrellas</div><div class="sub">Escuela Los Lirios • 25 estrellas • 25 voces • un mismo cielo</div></div><div class="actions"><button id="sound" aria-label="Activar o desactivar sonido">🔊 Sonido</button><button id="fullscreen" aria-label="Pantalla completa">⛶</button></div></header>
+<main id="book"></main>
+<footer><button id="prev">‹ Anterior</button><span id="counter">1 / 32</span><button id="next">Siguiente ›</button><span class="hint">También puedes deslizar o tocar los bordes.</span></footer>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+<script>
+const TOTAL=32; const root=document.getElementById('book');
+for(let i=1;i<=TOTAL;i++){const p=document.createElement('div');p.className='page '+(i===1||i===TOTAL?' -hard':'');const img=document.createElement('img');img.loading=i<5?'eager':'lazy';img.src=`pages/page-${String(i).padStart(2,'0')}.jpg`;img.alt=`Página ${i}`;p.appendChild(img);root.appendChild(p)}
+const pageFlip=new St.PageFlip(root,{width:1334,height:750,size:'stretch',minWidth:280,maxWidth:1400,minHeight:180,maxHeight:900,showCover:true,usePortrait:true,mobileScrollSupport:false,drawShadow:true,maxShadowOpacity:.35,flippingTime:650,swipeDistance:25,clickEventForward:true,useMouseEvents:true});
+pageFlip.loadFromHTML(document.querySelectorAll('#book .page'));
+const counter=document.getElementById('counter');
+function update(){counter.textContent=`${Math.min(pageFlip.getCurrentPageIndex()+1,TOTAL)} / ${TOTAL}`}
+pageFlip.on('flip',()=>{update();playFlipSound()}); update();
+document.getElementById('prev').onclick=()=>pageFlip.flipPrev(); document.getElementById('next').onclick=()=>pageFlip.flipNext();
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')pageFlip.flipPrev();if(e.key==='ArrowRight'||e.key===' ')pageFlip.flipNext()});
+let audioEnabled=true,ctx;
+function ensureAudio(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume()}
+function playFlipSound(){if(!audioEnabled)return;try{ensureAudio();const dur=.16,n=ctx.sampleRate*dur,buf=ctx.createBuffer(1,n,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<n;i++){const t=i/n;d[i]=(Math.random()*2-1)*(1-t)*(0.25+0.75*Math.sin(Math.PI*t));}const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();src.buffer=buf;filter.type='bandpass';filter.frequency.value=1700;filter.Q.value=.55;gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.16,ctx.currentTime+.015);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+dur);src.connect(filter).connect(gain).connect(ctx.destination);src.start();}catch(e){}}
+document.getElementById('sound').onclick=()=>{audioEnabled=!audioEnabled;document.getElementById('sound').textContent=audioEnabled?'🔊 Sonido':'🔇 Silencio';if(audioEnabled)ensureAudio()};
+document.getElementById('fullscreen').onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()};
+window.addEventListener('load',()=>setTimeout(()=>{const l=document.getElementById('loading');l.style.opacity=0;setTimeout(()=>l.remove(),350)},300));
+</script>
+</body></html>
